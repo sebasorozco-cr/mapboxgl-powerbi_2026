@@ -1,16 +1,13 @@
 # Mapbox Visual for Microsoft Power BI
 
-[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
-
-:no_entry: **DEPRECATED**
-
-Mapbox Visual for Microsoft Power BI is no longer maintained.
+## New maintenance team at the Costa Rican Institute of Technology (ITCR)
 
 ---
 
 Make sense of your big & dynamic location data with the Mapbox Visual for Power BI. Quickly design high-performance map visuals using graduated circles, clusters, and interactive heatmaps. Even customize your Mapbox visual with custom shapes, imagery, and design using [Mapbox Studio](www.mapbox.com/studio). Check out the [Mapbox Gallery](https://www.mapbox.com/gallery/) to get a sense of what's possible with Studio.
 
-Drop in the Mapbox Visual to your Power BI dashboard from the [Microsoft Office Store](https://appsource.microsoft.com/en-us/product/power-bi-visuals/WA104381472?tab=Overview).
+Drop in the Mapbox Visual to your Power BI dashboard from the "New Releases" branch:
+- https://github.com/sebasorozco-cr/mapboxgl-powerbi_2026/releases/tag/v1.8.4.1
 
 ![](https://dl.dropbox.com/s/kymonz28oanehje/PowerBI-2.gif)
 
@@ -39,18 +36,12 @@ The Mapbox Visual by default operates using API resources hosted on `api.mapbox.
 
 #### How many data points does the Mapbox Visual support?
 
-Mapbox supports up to the maximum allowed by Power BI, 30,000 rows, for all visualization types including Choropleth (fill), cluster, heatmap, and circle. If your data is >30k rows, the Mapbox Visual will sample your data down to 30k rows and visualize the resultant sample. If you need to visualize more than 30k rows for your use case, reach out to our sales team to connect you with a Mapbox Partner to setup a custom solution for your use case.
+Mapbox supports up to the maximum allowed by Power BI, 30,000 rows, for all visualization types including Choropleth (fill), cluster, heatmap, and circle. If your data is >30k rows, the Mapbox Visual will sample your data down to 30k rows and visualize the resultant sample.
 
 ### Developing and Contributing.
 
 - This is an open source repo and we welcome contributions from the public.
 - Please see [contributing.md](CONTRIBUTING.md) for more information.
-
-### Adding MapboxGL Viz to a Power BI Dashboard
-
-On Power BI Online or Desktop, click `add visual from marketplace` and search `Mapbox`. Check out the visual on the Microsoft Office Store at https://appsource.microsoft.com/en-us/product/power-bi-visuals/olgaltatokorlatoltfelelossegutarsasag1643647545884.mapbox_pbi_custom_visual?tab=Overview.
-
-![](https://dl.dropbox.com/s/m0rgaypm9d7o0ee/mapbox_marketplace_visual.png)
 
 ## What is Mapbox?
 
