@@ -1,5 +1,5 @@
 import powerbiVisualsApi from "powerbi-visuals-api";
-import { decorateLayer  } from "../mapboxUtils"
+import { decorateLayer, addDataLayer, moveDataLayer } from "../mapboxUtils"
 import { Layer } from "./layer"
 import { Sources } from "../datasources/sources"
 import { MapboxMap } from "../visual"
@@ -30,7 +30,7 @@ export class Raster extends Layer {
                 'raster-opacity': 1
             }
         });
-        Raster.LayerOrder.forEach((layerId) => map.addLayer(layers[layerId], beforeLayerId));
+        Raster.LayerOrder.forEach((layerId) => addDataLayer(map, layers[layerId], beforeLayerId, settings));
     }
 
     removeLayer() {

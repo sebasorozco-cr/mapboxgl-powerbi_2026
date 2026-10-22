@@ -1,6 +1,6 @@
 import powerbiVisualsApi from "powerbi-visuals-api";
 import IVisualHost = powerbiVisualsApi.extensibility.visual.IVisualHost;
-import { GeoJSONGeometry } from "@mapbox/geojson-types"
+type GeoJSONGeometry = GeoJSON.Geometry
 import * as mapboxgl from "mapbox-gl"
 
 import { debounce } from "./mapboxUtils"

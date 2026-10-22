@@ -42,6 +42,11 @@ export class MapboxSettings extends DataViewObjectsParser {
         public choropleth: ChoroplethSettings = new ChoroplethSettings();
         public raster: RasterSettings = new RasterSettings();
         public legends: LegendSettings = new LegendSettings();
+        public standard: StandardSettings = new StandardSettings();
+
+        // Set by the visual right before the format pane is enumerated: true when the loaded style is built
+        // on Mapbox Standard (a style import), which matters for custom style URLs.
+        public static mapUsesImports: boolean = false;
 
         public static enumerateObjectInstances(
             dataViewObjectParser: DataViewObjectsParser,
@@ -51,6 +56,9 @@ export class MapboxSettings extends DataViewObjectsParser {
             let instanceEnumeration = DataViewObjectsParser.enumerateObjectInstances(dataViewObjectParser, options);
 
             switch (options.objectName) {
+                case 'standard': {
+                    return settings.standard.enumerateObjectInstances(instanceEnumeration, settings.api.style);
+                }
                 case 'api':
                 case 'circle':
                 case 'choropleth':
@@ -73,9 +81,12 @@ export class APISettings {
     public startLat: number = 0;
     public showLayerControl: boolean = false;
     public autozoom: boolean = true;
+    public initialPitchOn: boolean = false;
+    public initialPitch: number = 45;
     public mapboxControls: boolean = true;
     public lasso: boolean = true;
     public polygon: boolean = true;
+    public radiusTool: boolean = true;
     public apiUrl: string = "https://api.mapbox.com"
     public labelPosition: string = "above";
 
@@ -86,6 +97,13 @@ export class APISettings {
         if (!properties.mapboxControls) {
             delete properties.lasso
             delete properties.polygon
+            delete properties.radiusTool
+        }
+        // The layer control lists classic style layers, which Mapbox Standard does not expose
+        if (properties.style === constants.STANDARD_STYLE_URL || (properties.style === 'custom' && MapboxSettings.mapUsesImports)) {
+            delete properties.showLayerControl
+            // The data position of the Standard Style card replaces it for these styles
+            delete properties.labelPosition
         }
         // Hide / show custom map style URL control
         if (properties.style != 'custom') {
@@ -100,7 +118,10 @@ export class APISettings {
             delete properties.startLong
             delete properties.startLat
         }
-
+        // The angle only matters while Initial Pitch is on
+        if (!properties.initialPitchOn) {
+            delete properties.initialPitch
+        }
         return { instances }
     }
 }
@@ -112,6 +133,37 @@ export class APISettings {
     }
 
 
+
+// Options of the Mapbox Standard basemap. "keep" leaves whatever the style itself defines.
+export class StandardSettings {
+    // Where data layers are drawn relative to the basemap: "middle" | "top" | "none" (see layerSlots.ts)
+    public dataPosition: string = "middle";
+    public lightPreset: string = "keep";
+    public theme: string = "keep";
+    public showPlaceLabels: string = "keep";
+    public showRoadLabels: string = "keep";
+    public showPointOfInterestLabels: string = "keep";
+    public showTransitLabels: string = "keep";
+    public show3dObjects: string = "keep";
+    public showAdminBoundaries: string = "keep";
+    public showPedestrianRoads: string = "keep";
+    public show3dLandmarks: string = "keep";
+    public show3dBuildings: string = "keep";
+    public terrain: string = "keep";
+    public dataColors: string = "true";   // "true" | "preset"
+    public showStylePanel: boolean = true;
+
+
+    public enumerateObjectInstances(objectEnumeration, apiStyle: string) {
+        // The card only makes sense for Mapbox Standard, or a custom style built on it
+        const isStandardBased = apiStyle === constants.STANDARD_STYLE_URL ||
+            (apiStyle === 'custom' && MapboxSettings.mapUsesImports);
+        if (!isStandardBased) {
+            return { instances: [] };
+        }
+        return objectEnumeration;
+    }
+}
 
 export class CircleSettings {
     public show: boolean = false;
@@ -242,7 +294,6 @@ export class ChoroplethSettings {
     public maxZoom: number = 22;
     public height: number = 500;
     public baseHeight: number = 0;
-    public extrusionPitch: number = 0;
     public extrusionColor: string = "#FFC0CB"
 
     public maxLevel: number = 1
@@ -366,12 +417,6 @@ export class ChoroplethSettings {
                 numberRange: {
                     min: 0,
                     max: properties.height || 0
-                }
-            },
-            extrusionPitch: {
-                numberRange: {
-                    min: 0,
-                    max: 60
                 }
             },
             highlightOpacity: {

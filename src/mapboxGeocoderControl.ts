@@ -70,7 +70,7 @@ export class MapboxGeocoderControl implements IControl {
         }
     }
 
-    public getDefaultPosition(): string {
+    public getDefaultPosition(): any {
         return "top-center"
     }
 

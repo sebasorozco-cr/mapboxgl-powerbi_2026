@@ -2,9 +2,9 @@
   "visual": {
     "name": "mapboxGLMap",
     "displayName": "Mapbox Visual",
-    "guid": "PBI_CV_EB3A4088_75C5_4746_9D8B_255A7B7ECD6X",
+    "guid": "PBI_CV_124A085D_484D_48C2_9AF9_AF197BA1CF41",
     "visualClassName": "MapboxMap",
-    "version": "{MAJOR_VERSION}.{MINOR_VERSION}.{GITHUB_RUN_NUMBER}",
+    "version": "1.8.4.1",
     "description": "Visualize massive location data with custom map styles, using circle, heatmap, choropleth, and cluster layers.",
     "supportUrl": "www.mapbox.com/help",
     "gitHubUrl": "https://github.com/mapbox/mapboxgl-powerbi"

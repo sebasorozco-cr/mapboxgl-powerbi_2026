@@ -44,4 +44,4 @@ v1.8.4.1 uses a new visual GUID, so Power BI treats it as a different visual fro
 
 ## Known notes
 - The terrain, light-preset and "true color" options only apply to Standard-based styles.
-
+- No new limitations have been found so far.

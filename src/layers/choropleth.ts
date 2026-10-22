@@ -1,7 +1,7 @@
 import powerbiVisualsApi from "powerbi-visuals-api";
 import * as chroma from "chroma-js"
 
-import { ClassificationMethod, Limits, shouldUseGradient, decorateLayer  } from "../mapboxUtils"
+import { ClassificationMethod, Limits, shouldUseGradient, decorateLayer, addDataLayer, moveDataLayer } from "../mapboxUtils"
 import { RoleMap } from "../roleMap"
 import { Palette } from "../palette"
 import { Layer } from "./layer"
@@ -154,7 +154,7 @@ export class Choropleth extends Layer {
             filter: zeroFilter
         });
 
-        Choropleth.LayerOrder.forEach((layerId) => map.addLayer(layers[layerId], beforeLayerId));
+        Choropleth.LayerOrder.forEach((layerId) => addDataLayer(map, layers[layerId], beforeLayerId, settings));
     }
 
     isExtruding() {
@@ -248,7 +248,7 @@ export class Choropleth extends Layer {
 
     moveLayer(beforeLayerId: string) {
         const map = this.parent.getMap();
-        Choropleth.LayerOrder.forEach((layerId) => map.moveLayer(layerId, beforeLayerId));
+        Choropleth.LayerOrder.forEach((layerId) => moveDataLayer(map, layerId, beforeLayerId, this.parent.getSettings()));
     }
 
     getSource(settings) {
@@ -299,11 +299,9 @@ export class Choropleth extends Layer {
         if (this.isExtruding()) {
             map.setFilter(Choropleth.ID, zeroFilter)
             map.setFilter(Choropleth.ExtrusionID, filter)
-            map.setPitch(settings.extrusionPitch)
         } else {
             map.setFilter(Choropleth.ExtrusionID, zeroFilter)
-            // map.setPitch(0)
-     }
+        }
     }
 
     setFillProps(map: any, settings: ChoroplethSettings) {
@@ -328,6 +326,24 @@ export class Choropleth extends Layer {
         map.setPaintProperty(Choropleth.HoverHighlightOutlineID, 'line-color', settings.hoverHighlightOutlineColor);
         map.setPaintProperty(Choropleth.HoverHighlightOutlineID, 'line-opacity', settings.hoverHighlightOutlineOpacity / 100);
         map.setPaintProperty(Choropleth.HoverHighlightOutlineID, 'line-width', settings.hoverHighlightOutlineWidth);
+    }
+
+    // Keeps highlight colors exactly as chosen in the format pane, whatever the light preset is
+    keepHighlightColors(map: any) {
+        const emissiveProps: { [id: string]: string } = {};
+        emissiveProps[Choropleth.HighlightID] = 'fill-emissive-strength';
+        emissiveProps[Choropleth.HoverHighlightID] = 'fill-emissive-strength';
+        emissiveProps[Choropleth.HighlightOutlineID] = 'line-emissive-strength';
+        emissiveProps[Choropleth.HoverHighlightOutlineID] = 'line-emissive-strength';
+        emissiveProps[Choropleth.ExtrusionHighlightID] = 'fill-extrusion-emissive-strength';
+
+        Object.keys(emissiveProps).forEach((id) => {
+            try {
+                if (map.getLayer(id) && map.getPaintProperty(id, emissiveProps[id]) !== 1) {
+                    map.setPaintProperty(id, emissiveProps[id], 1);
+                }
+            } catch (e) { /* style without emissive support: leave as is */ }
+        });
     }
 
     setZoom(map: any, settings: ChoroplethSettings) {
@@ -439,6 +455,7 @@ export class Choropleth extends Layer {
 
             this.setLineProps(map, choroSettings)
             this.setFillProps(map, choroSettings)
+            this.keepHighlightColors(map)
             this.setZoom(map, choroSettings)
         }
 

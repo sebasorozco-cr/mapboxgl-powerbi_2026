@@ -1,5 +1,5 @@
 import powerbiVisualsApi from "powerbi-visuals-api";
-import { ClassificationMethod, decorateLayer } from "../mapboxUtils"
+import { ClassificationMethod, decorateLayer, addDataLayer, moveDataLayer } from "../mapboxUtils"
 import { RoleMap } from "../roleMap"
 import { Layer } from "./layer"
 import { LegendControl } from "../legendControl"
@@ -53,7 +53,7 @@ export class Cluster extends Layer {
             type: 'cluster',
             filter: ['!has', 'Count']
         });
-        Cluster.LayerOrder.forEach((layerId) => map.addLayer(layers[layerId], beforeLayerId));
+        Cluster.LayerOrder.forEach((layerId) => addDataLayer(map, layers[layerId], beforeLayerId, settings));
 
         const clusterLabelLayer = decorateLayer({
             id: Cluster.LabelID,
@@ -70,15 +70,15 @@ export class Cluster extends Layer {
                 "text-halo-width": 1
             }
         });
-        map.addLayer(clusterLabelLayer);
+        addDataLayer(map, clusterLabelLayer, undefined, settings);
     }
 
     moveLayer(beforeLayerId: string) {
         const map = this.parent.getMap();
-        Cluster.LayerOrder.forEach((layerId) => map.moveLayer(layerId, beforeLayerId));
+        Cluster.LayerOrder.forEach((layerId) => moveDataLayer(map, layerId, beforeLayerId, this.parent.getSettings()));
         if (!beforeLayerId) {
             // the cluster label should still be on top when the other layers are moved to top
-            map.moveLayer(Cluster.LabelID);
+            moveDataLayer(map, Cluster.LabelID, undefined, this.parent.getSettings());
         }
     }
 

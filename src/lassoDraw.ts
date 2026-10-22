@@ -1,7 +1,9 @@
 import { Filter } from "./filter"
 
-import MapboxDrawConstants from '@mapbox/mapbox-gl-draw/src/constants.js';
-import MapboxDraw from '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.js';
+import * as MapboxDrawConstants from "./drawConstants";
+import * as MapboxDrawModule from '@mapbox/mapbox-gl-draw';
+// Package root import (deep imports are blocked by the package "exports" field).
+const MapboxDraw: any = (MapboxDrawModule as any).default || MapboxDrawModule;
 import simplify from "@turf/simplify"
 import { constants } from "./constants";
 

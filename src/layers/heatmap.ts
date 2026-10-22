@@ -1,5 +1,5 @@
 import powerbiVisualsApi from "powerbi-visuals-api";
-import { decorateLayer } from "../mapboxUtils"
+import { decorateLayer, addDataLayer, moveDataLayer } from "../mapboxUtils"
 import { RoleMap } from "../roleMap"
 import { Layer } from "./layer"
 import { MapboxSettings  } from "../settings"
@@ -27,7 +27,7 @@ export class Heatmap extends Layer {
             source: 'data',
             type: 'heatmap',
         });
-        Heatmap.LayerOrder.forEach((layerId) => map.addLayer(layers[layerId], beforeLayerId));
+        Heatmap.LayerOrder.forEach((layerId) => addDataLayer(map, layers[layerId], beforeLayerId, settings));
     }
 
     removeLayer() {
@@ -38,7 +38,7 @@ export class Heatmap extends Layer {
 
     moveLayer(beforeLayerId: string) {
         const map = this.parent.getMap();
-        Heatmap.LayerOrder.forEach((layerId) => map.moveLayer(layerId, beforeLayerId));
+        Heatmap.LayerOrder.forEach((layerId) => moveDataLayer(map, layerId, beforeLayerId, this.parent.getSettings()));
     }
 
     applySettings(settings: MapboxSettings, roleMap: RoleMap, prevId: string): string {

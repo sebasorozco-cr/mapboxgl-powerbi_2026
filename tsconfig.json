@@ -11,7 +11,9 @@
         "lib": [
             "es2015",
             "dom"
-        ]
+        ],
+        "skipLibCheck": true,
+        "allowSyntheticDefaultImports": true
     },
     "files": [
         "./src/visual.ts"

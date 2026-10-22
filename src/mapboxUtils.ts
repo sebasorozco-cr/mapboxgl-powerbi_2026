@@ -3,6 +3,10 @@ import * as chroma from "chroma-js"
 import { featureCollection } from "@turf/helpers"
 import { propEach } from "@turf/meta"
 import { MapboxSettings } from "./settings";
+import { usesImportedBasemap } from "./layerSlots";
+
+// Placement helpers for Mapbox Standard live in layerSlots.ts; re-exported so existing imports keep working
+export { getStyleImportIds, usesImportedBasemap, getDataSlot, addDataLayer, moveDataLayer } from "./layerSlots";
 
 export enum ClassificationMethod {
     Quantile,
@@ -17,11 +21,13 @@ export interface Limits {
     values: number[];
 }
 
-export function zoomToData(map, bounds) {
+export function zoomToData(map, bounds, pitch: number | null = null) {
     if (bounds) {
         map.fitBounds(bounds, {
             padding: 20,
             maxZoom: 15,
+            // keep the current tilt unless a new initial pitch is being applied
+            pitch: pitch !== null ? pitch : map.getPitch()
         });
 
     }
@@ -235,6 +241,11 @@ export function dragElement(el) {
 }
 
 export function calculateLabelPosition(settings: MapboxSettings, map: mapboxgl.Map): string {
+    // Mapbox Standard (and styles built on it): layers are placed with slots, see addDataLayer
+    if (usesImportedBasemap(map)) {
+        return null;
+    }
+
     // If there is no firstSymbolId specified, it adds the data as the last element.
     let firstSymbolId: string = null;
     if (settings.api.labelPosition === 'above') {
@@ -255,3 +266,4 @@ export function calculateLabelPosition(settings: MapboxSettings, map: mapboxgl.M
     }
     return firstSymbolId;
 }
+

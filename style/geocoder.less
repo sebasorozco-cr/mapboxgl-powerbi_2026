@@ -7,3 +7,14 @@
 
 // Change size for search box
 .mapboxgl-ctrl-geocoder { width: 50%; max-width: none; }
+
+// Larger text for the search box (+2pt or more over the library default)
+@geocoder-font-size: 18px;
+
+.mapboxgl-ctrl-geocoder { font-size: @geocoder-font-size; line-height: 26px; }
+.mapboxgl-ctrl-geocoder input[type='text'],
+.mapboxgl-ctrl-geocoder--input { font-size: @geocoder-font-size; height: 42px; padding: 6px 40px; }
+.mapboxgl-ctrl-geocoder .suggestions > li > a,
+.mapboxgl-ctrl-geocoder--suggestion-title,
+.mapboxgl-ctrl-geocoder--suggestion-address { font-size: @geocoder-font-size; }
+.mapboxgl-ctrl-geocoder--icon { top: 9px; }

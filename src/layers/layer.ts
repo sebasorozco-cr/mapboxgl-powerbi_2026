@@ -5,7 +5,7 @@ import * as tooltip from "powerbi-visuals-utils-tooltiputils"
 
 import * as chroma from "chroma-js"
 
-import { ClassificationMethod, filterValues, getBreaks, getClassCount, Limits } from "../mapboxUtils"
+import { ClassificationMethod, filterValues, getBreaks, getClassCount, Limits, calculateLabelPosition } from "../mapboxUtils"
 import { RoleMap } from "../roleMap"
 import { ColorStops, LegendControl } from "../legendControl"
 import { MapboxSettings, CircleSettings, ChoroplethSettings, ClusterSettings } from "../settings"
@@ -244,25 +244,7 @@ export abstract class Layer {
     }
 
     calculateLabelPosition(settings: MapboxSettings, map: mapboxgl.Map) {
-        // If there is no firstSymbolId specified, it adds the data as the last element.
-        let firstSymbolId = null;
-        if (settings.api.labelPosition === 'above') {
-            // For default styles place data under waterway-label layer
-            firstSymbolId = 'waterway-label';
-            if (settings.api.style == 'mapbox://styles/mapbox/satellite-v9?optimize=true' ||
-                settings.api.style == 'custom') {
-                // For custom style find the lowest symbol layer to place data underneath
-                firstSymbolId = '';
-                let layers = map.getStyle().layers;
-                for (let i = 0; i < layers.length; i++) {
-                    if (layers[i].type === 'symbol') {
-                        firstSymbolId = layers[i].id;
-                        break;
-                    }
-                }
-            }
-        }
-        return firstSymbolId;
+        return calculateLabelPosition(settings, map);
     }
 
     static getTooltipData(value: any): any[] {

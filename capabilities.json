@@ -213,6 +213,11 @@
               "type": {
                 "enumeration": [
                   {
+                    "value": "mapbox:\/\/styles\/mapbox\/standard",
+                    "displayName": "Standard",
+                    "displayNameKey": "standard"
+                  },
+                  {
                     "value": "mapbox:\/\/styles\/mapbox\/light-v10?optimize=true",
                     "displayName": "Light",
                     "displayNameKey": "light_v10"
@@ -330,6 +335,22 @@
                 "bool": true
               }
             },
+            "initialPitchOn": {
+              "displayName": "Initial Pitch",
+              "displayNameKey": "initialPitchOn",
+              "description": "Start the map with a tilted camera (works with or without Auto Zoom)",
+              "type": {
+                "bool": true
+              }
+            },
+            "initialPitch": {
+              "displayName": "Pitch angle",
+              "displayNameKey": "initialPitch",
+              "description": "Camera tilt in degrees (0 = top-down, max 85)",
+              "type": {
+                "numeric": true
+              }
+            },
             "mapboxControls": {
               "displayName": "Mapbox Controls",
               "displayNameKey": "mapboxControls",
@@ -354,12 +375,362 @@
                 "bool": true
               }
             },
+            "radiusTool": {
+              "displayName": "Radius Tool",
+              "displayNameKey": "radiusTool",
+              "description": "Show radius selection button",
+              "type": {
+                "bool": true
+              }
+            },
             "apiUrl": {
               "displayName": "Mapbox API URL",
               "displayNameKey": "apiUrl",
               "description": "Default URL for map api requests.  Set this to your Mapbox Atlas server hostname.",
               "type": {
                 "text": true
+              }
+            }
+          }
+        },
+        "standard": {
+          "displayName": "Standard Style",
+          "displayNameKey": "standard_style",
+          "properties": {
+            "dataPosition": {
+              "displayName": "Data position",
+              "displayNameKey": "standard_dataPosition",
+              "description": "Where your data is drawn relative to the Standard basemap. Mapbox offers only these three positions.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "middle",
+                    "displayName": "Below buildings and labels",
+                    "displayNameKey": "standard_dataPosition_middle"
+                  },
+                  {
+                    "value": "top",
+                    "displayName": "Above buildings, below place labels",
+                    "displayNameKey": "standard_dataPosition_top"
+                  },
+                  {
+                    "value": "none",
+                    "displayName": "On top of everything",
+                    "displayNameKey": "standard_dataPosition_none"
+                  }
+                ]
+              }
+            },
+            "lightPreset": {
+              "displayName": "Light preset",
+              "displayNameKey": "standard_lightPreset",
+              "description": "Time of day lighting of the Standard basemap.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_lightPreset_keep"
+                  },
+                  {
+                    "value": "dawn",
+                    "displayName": "Dawn",
+                    "displayNameKey": "standard_lightPreset_dawn"
+                  },
+                  {
+                    "value": "day",
+                    "displayName": "Day",
+                    "displayNameKey": "standard_lightPreset_day"
+                  },
+                  {
+                    "value": "dusk",
+                    "displayName": "Dusk",
+                    "displayNameKey": "standard_lightPreset_dusk"
+                  },
+                  {
+                    "value": "night",
+                    "displayName": "Night",
+                    "displayNameKey": "standard_lightPreset_night"
+                  }
+                ]
+              }
+            },
+            "theme": {
+              "displayName": "Theme",
+              "displayNameKey": "standard_theme",
+              "description": "Colour theme of the Standard basemap.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_theme_keep"
+                  },
+                  {
+                    "value": "default",
+                    "displayName": "Default",
+                    "displayNameKey": "standard_theme_default"
+                  },
+                  {
+                    "value": "faded",
+                    "displayName": "Faded",
+                    "displayNameKey": "standard_theme_faded"
+                  },
+                  {
+                    "value": "monochrome",
+                    "displayName": "Monochrome",
+                    "displayNameKey": "standard_theme_monochrome"
+                  }
+                ]
+              }
+            },
+            "showPlaceLabels": {
+              "displayName": "Place labels",
+              "displayNameKey": "standard_showPlaceLabels",
+              "description": "Country, city and neighbourhood labels.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_showPlaceLabels_keep"
+                  },
+                  {
+                    "value": "show",
+                    "displayName": "Show",
+                    "displayNameKey": "standard_showPlaceLabels_show"
+                  },
+                  {
+                    "value": "hide",
+                    "displayName": "Hide",
+                    "displayNameKey": "standard_showPlaceLabels_hide"
+                  }
+                ]
+              }
+            },
+            "showRoadLabels": {
+              "displayName": "Road labels",
+              "displayNameKey": "standard_showRoadLabels",
+              "description": "Street name labels.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_showRoadLabels_keep"
+                  },
+                  {
+                    "value": "show",
+                    "displayName": "Show",
+                    "displayNameKey": "standard_showRoadLabels_show"
+                  },
+                  {
+                    "value": "hide",
+                    "displayName": "Hide",
+                    "displayNameKey": "standard_showRoadLabels_hide"
+                  }
+                ]
+              }
+            },
+            "showPointOfInterestLabels": {
+              "displayName": "Point of interest labels",
+              "displayNameKey": "standard_showPointOfInterestLabels",
+              "description": "Shops, restaurants, parks and other points of interest.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_showPointOfInterestLabels_keep"
+                  },
+                  {
+                    "value": "show",
+                    "displayName": "Show",
+                    "displayNameKey": "standard_showPointOfInterestLabels_show"
+                  },
+                  {
+                    "value": "hide",
+                    "displayName": "Hide",
+                    "displayNameKey": "standard_showPointOfInterestLabels_hide"
+                  }
+                ]
+              }
+            },
+            "showTransitLabels": {
+              "displayName": "Transit labels",
+              "displayNameKey": "standard_showTransitLabels",
+              "description": "Public transit stops and station labels.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_showTransitLabels_keep"
+                  },
+                  {
+                    "value": "show",
+                    "displayName": "Show",
+                    "displayNameKey": "standard_showTransitLabels_show"
+                  },
+                  {
+                    "value": "hide",
+                    "displayName": "Hide",
+                    "displayNameKey": "standard_showTransitLabels_hide"
+                  }
+                ]
+              }
+            },
+            "show3dObjects": {
+              "displayName": "3D objects",
+              "displayNameKey": "standard_show3dObjects",
+              "description": "3D buildings, landmarks and trees.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_show3dObjects_keep"
+                  },
+                  {
+                    "value": "show",
+                    "displayName": "Show",
+                    "displayNameKey": "standard_show3dObjects_show"
+                  },
+                  {
+                    "value": "hide",
+                    "displayName": "Hide",
+                    "displayNameKey": "standard_show3dObjects_hide"
+                  }
+                ]
+              }
+            },
+            "show3dLandmarks": { 
+              "displayName": "3D landmarks",
+              "displayNameKey": "standard_show3dLandmarks",
+              "description": "3D architectural landmarks",
+              "type": { 
+                "enumeration": [
+                  { 
+                    "value": "keep", 
+                    "displayName": "Keep style" 
+                  },
+                  { 
+                    "value": "show", 
+                    "displayName": "Show" 
+                  },  
+                  { 
+                    "value": "hide", 
+                    "displayName": "Hide" 
+                  } 
+                ] 
+              } 
+            },
+            "show3dBuildings": { 
+              "displayName": "3D buildings",
+              "displayNameKey": "standard_show3dBuildings",
+              "description": "3D LOD_1 buildings",
+              "type": { 
+                "enumeration": [
+                  { 
+                    "value": "keep", 
+                    "displayName": "Keep style" 
+                  },
+                  { 
+                    "value": "show", 
+                    "displayName": "Show" 
+                  },  
+                  { 
+                    "value": "hide", 
+                    "displayName": "Hide" 
+                  } 
+                ] 
+              } 
+            },
+            "terrain": { 
+              "displayName": "Terrain",
+              "displayNameKey": "standard_terrain",
+              "description": "3D topography",
+              "type": { 
+                "enumeration": [
+                  { 
+                    "value": "keep", 
+                    "displayName": "Keep style" 
+                  },
+                  { 
+                    "value": "show", 
+                    "displayName": "Show" 
+                  },  
+                  { 
+                    "value": "hide", 
+                    "displayName": "Hide" 
+                  } 
+                ] 
+              } 
+            },
+            "dataColors": { 
+              "displayName": "Data colors", 
+              "type": { 
+                "enumeration": [
+                  { 
+                    "value": "true", 
+                    "displayName": "True colors" 
+                  },  
+                  { "value": "preset", 
+                  "displayName": "Follow light preset" 
+                  } 
+                ] 
+              } 
+            },
+            "showStylePanel": { 
+              "displayName": "Show style panel on map", 
+              "type": { "bool": true } 
+            },
+            "showAdminBoundaries": {
+              "displayName": "Administrative boundaries",
+              "displayNameKey": "standard_showAdminBoundaries",
+              "description": "Country and state boundary lines.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_showAdminBoundaries_keep"
+                  },
+                  {
+                    "value": "show",
+                    "displayName": "Show",
+                    "displayNameKey": "standard_showAdminBoundaries_show"
+                  },
+                  {
+                    "value": "hide",
+                    "displayName": "Hide",
+                    "displayNameKey": "standard_showAdminBoundaries_hide"
+                  }
+                ]
+              }
+            },
+            "showPedestrianRoads": {
+              "displayName": "Pedestrian roads",
+              "displayNameKey": "standard_showPedestrianRoads",
+              "description": "Footpaths and pedestrian streets.",
+              "type": {
+                "enumeration": [
+                  {
+                    "value": "keep",
+                    "displayName": "Style default",
+                    "displayNameKey": "standard_showPedestrianRoads_keep"
+                  },
+                  {
+                    "value": "show",
+                    "displayName": "Show",
+                    "displayNameKey": "standard_showPedestrianRoads_show"
+                  },
+                  {
+                    "value": "hide",
+                    "displayName": "Hide",
+                    "displayNameKey": "standard_showPedestrianRoads_hide"
+                  }
+                ]
               }
             }
           }
@@ -1015,14 +1386,6 @@
               "displayName": "Extrusion Height",
               "displayNameKey": "height",
               "description": "Defines height for 3d extrusion multiplied by 1000",
-              "type": {
-                "integer": true
-              }
-            },
-            "extrusionPitch": {
-              "displayName": "Extrusion Pitch",
-              "displayNameKey": "extrusionPitch",
-              "description": "Defines pitch for 3d extrusion",
               "type": {
                 "integer": true
               }

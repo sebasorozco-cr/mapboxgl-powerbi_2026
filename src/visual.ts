@@ -54,11 +54,24 @@ import { MapboxGeocoderControl } from "./mapboxGeocoderControl"
 import { LayerControl } from "./layerControl"
 
 import * as mapboxgl from "mapbox-gl"
+
+// v3 typings do not declare accessToken / setRTLTextPlugin / config on the namespace import,
+// and assigning to a namespace import is unreliable after bundling. Use the real module object.
+const mapboxglRuntime: any = (mapboxgl as any).default || mapboxgl;
+
+import { DebugOverlay } from "./debugOverlay"
+// TEMPORARY: on-screen diagnostics panel. Set to false once the map renders correctly.
+const DEBUG_OVERLAY = false;
 import { MapboxSettings, ChoroplethSettings } from "./settings";
-import { calculateLabelPosition, zoomToData } from "./mapboxUtils";
+import { calculateLabelPosition, zoomToData, usesImportedBasemap } from "./mapboxUtils";
+import { StandardConfig } from "./standardConfig";
 import { ITooltipServiceWrapper, createTooltipServiceWrapper, TooltipEventArgs } from "./tooltipServiceWrapper"
 import { mapboxConverter } from "./mapboxConverter";
 import { Templates } from "./templates";
+import { StandardPanelControl } from "./standardPanelControl";
+import { TerrainSwitch, applyDataBrightness } from "./standardExtras";
+import { WalkControl } from "./walkControl";
+import { XRayControl } from "./xrayControl"; // NEW (1.8.4)
 
 import { Layer } from "./layers/layer"
 import { Circle } from "./layers/circle"
@@ -78,14 +91,26 @@ export class MapboxMap implements IVisual {
     private mapDiv: HTMLElement;
     private errorDiv: HTMLElement;
     private mapStyle: string = "";
+    private styleReady: boolean = false;
+    private initialStyle: string = "";              // style the map was constructed with
+    private styleLoadId: number = 0;
+    private errorHandlerBound: boolean = false;
+    private latestDataView: DataView = null;
+    private standardConfig: StandardConfig = new StandardConfig();
+    private terrainSwitch = new TerrainSwitch();
+    private stylePanel: StandardPanelControl;
+    private viewerOverrides: { [key: string]: string } = {};
     private map: any;
     private geocoder: MapboxGeocoderControl;
     private autoZoomControl: AutoZoomControl;
     private layerControl: LayerControl;
+    private walkControl = new WalkControl();
+    private xrayControl = new XRayControl(() => this.wantsBuildings()); // NEW (1.8.4)
     private navigationControl: mapboxgl.NavigationControl;
     private controlsPopulated: boolean;
     private roleMap: any;
     private previousZoom: number;
+    private appliedPitchKey: string = "";
     private previousCoordinates: mapboxgl.LngLat;
     private updatedHandler: Function = () => { }
     private layers: Layer[] = [];
@@ -98,6 +123,7 @@ export class MapboxMap implements IVisual {
     private selection: Selection<any>;
     private selectionManager: ISelectionManager;
     private events: IVisualEventService;
+    private debug: DebugOverlay;
 
     constructor(options: VisualConstructorOptions) {
         this.target = options.element;
@@ -113,6 +139,10 @@ export class MapboxMap implements IVisual {
             this.errorDiv = document.createElement('div');
             this.errorDiv.className = 'error';
             this.target.appendChild(this.errorDiv);
+
+            if (DEBUG_OVERLAY) {
+                this.debug = new DebugOverlay(this.target);
+            }
         }
         this.host = options.host;
         this.filter = new Filter(this, options.host)
@@ -120,6 +150,11 @@ export class MapboxMap implements IVisual {
         this.controlsPopulated = false;
         this.navigationControl = new mapboxgl.NavigationControl();
         this.autoZoomControl = new AutoZoomControl(this.host);
+        this.stylePanel = new StandardPanelControl(
+            (key, value) => { this.viewerOverrides[key] = value; this.applyStandardConfig(); },
+            () => { this.viewerOverrides = {}; this.applyStandardConfig(); },
+            () => this.effectiveStandard().dataColors,
+            () => this.terrainSwitch.isOn(this.map));
         this.layerControl = new LayerControl();
         this.drawControl = new DrawControl(this.filter)
         this.tooltipServiceWrapper = createTooltipServiceWrapper(options.host.tooltipService, options.element);
@@ -128,7 +163,29 @@ export class MapboxMap implements IVisual {
         this.events = options.host.eventService;
     }
 
+    // Initial pitch in degrees (0-85), or null when the Initial Pitch toggle is off
+    private initialPitchValue(settings: MapboxSettings): number | null {
+        if (!settings.api.initialPitchOn) {
+            return null;
+        }
+        const p = Number(settings.api.initialPitch);
+        return Math.max(0, Math.min(85, isNaN(p) ? 0 : p));
+    }
+
+    // Returns the pitch to apply, or null if there is nothing new to apply
+    private consumePitch(settings: MapboxSettings): number | null {
+        const p = this.initialPitchValue(settings);
+        const key = p === null ? 'off' : String(p);
+        if (key === this.appliedPitchKey) {
+            return null;
+        }
+        this.appliedPitchKey = key;
+        return p;
+    }
+
     updateZoom(settings: MapboxSettings) {
+        const pitch = this.consumePitch(settings);
+        let fitted = false;
         if (settings.api.autozoom) {
             const bounds = this.layers.map(layer => {
                 return layer.getBounds(settings);
@@ -141,12 +198,12 @@ export class MapboxMap implements IVisual {
                 }
                 const getPolygon = (bboxInput: any[]) => {
                     if (bboxInput?.length === 4) {
-                        return bboxPolygon(bboxInput as BBox2d)
+                    return bboxPolygon(bboxInput as BBox2d)
                     } else if (bboxInput?.length === 6) {
-                        return bboxPolygon(bboxInput as BBox3d)
+                    return bboxPolygon(bboxInput as BBox3d)
                     } else {
-                        // http://turfjs.org/docs/#bbox
-                        return bboxPolygon(bbox(bboxInput))
+                    // http://turfjs.org/docs/#bbox
+                    return bboxPolygon(bbox(bboxInput))
                     }
                 }
 
@@ -156,19 +213,28 @@ export class MapboxMap implements IVisual {
                 ]);
                 return bbox(combined)
             });
-            zoomToData(this.map, bounds);
+            if (bounds) {
+                zoomToData(this.map, bounds, pitch);
+                fitted = true;
+            }
+        }
+        // No auto-zoom (or no data to fit): apply the pitch on its own
+        if (!fitted && pitch !== null) {
+            this.map.easeTo({ pitch: pitch, duration: 600 });
         }
     }
 
     onUpdate(map: mapboxgl.Map, settings, updatedHandler: Function) {
         try {
+            // The map may have been removed or rebuilt while this call was pending
+            if (!this.map || !map || !map.getStyle()) { return; }
             let prevId = calculateLabelPosition(settings, map)
             this.layers.map(layer => {
-                    layer.applySettings(settings, this.roleMap, prevId);
+                layer.applySettings(settings, this.roleMap, prevId);
             });
-                this.updateLegend(settings)
-                this.layerControl.update(this.roleMap)
-                this.updateZoom(settings)
+            this.updateLegend(settings)
+            this.layerControl.update(this.roleMap)
+            this.updateZoom(settings)
         }
         catch (error) {
             console.error("OnUpdate failed:", error)
@@ -192,19 +258,32 @@ export class MapboxMap implements IVisual {
         }
 
         const center: [number, number] = [this.settings.api.startLong, this.settings.api.startLat];
+        const initialStyle = this.settings.api.style == 'custom' ? this.settings.api.styleUrl : this.settings.api.style;
+        this.initialStyle = initialStyle;
+        const startPitch = this.initialPitchValue(this.settings);
         const mapOptions = {
             container: this.mapDiv,
             zoom: this.settings.api.zoom,
             center: center,
+            pitch: startPitch === null ? 0 : startPitch,
+            accessToken: this.settings.api.accessToken,
+            style: initialStyle,
             transformRequest: (url, resourceType) => {
+                if (this.debug) {
+                    this.debug.request(String(resourceType), url);
+                }
                 if (url.slice(0, 25) == 'https://api.mapbox.com/v4' ||
                     url.slice(0, 26) == 'https://a.tiles.mapbox.com' ||
                     url.slice(0, 26) == 'https://b.tiles.mapbox.com' ||
                     url.slice(0, 26) == 'https://c.tiles.mapbox.com' ||
                     url.slice(0, 26) == 'https://d.tiles.mapbox.com') {
                     // Add PowerBI Plugin identifier for Mapbox API traffic
+                    // The URL may or may not already contain a query string
+                    const queryStart = url.indexOf("?");
                     return {
-                        url: [url.slice(0, url.indexOf("?") + 1), "pluginName=PowerBI&", url.slice(url.indexOf("?") + 1)].join('')
+                    url: queryStart === -1
+                    ? url + "?pluginName=PowerBI"
+                    : url.slice(0, queryStart + 1) + "pluginName=PowerBI&" + url.slice(queryStart + 1)
                     }
                 }
                 else {
@@ -214,8 +293,12 @@ export class MapboxMap implements IVisual {
             }
         }
         this.previousZoom = this.settings.api.zoom;
+        this.appliedPitchKey = startPitch === null ? 'off' : String(startPitch);
         // If the map container doesn't exist yet, create it
         this.map = new mapboxgl.Map(mapOptions);
+        if (this.debug) {
+            this.debug.attachMap(this.map, String(mapboxglRuntime.version));
+        }
         this.previousCoordinates = this.map.getCenter();
 
         this.layers = [];
@@ -228,15 +311,15 @@ export class MapboxMap implements IVisual {
         }))
 
         // @ts-ignore
-        mapboxgl.config.API_URL = this.settings.api.apiUrl;
+        mapboxglRuntime.config.API_URL = this.settings.api.apiUrl;
 
 
         this.filter.manageHandlers();
-        this.drawControl.updateDrawTools(this.settings.api.lasso, this.settings.api.polygon);
+        this.drawControl.updateDrawTools(this.settings.api.lasso, this.settings.api.polygon, this.settings.api.radiusTool);
         this.drawControl.manageHandlers(this);
         this.handleContextMenu();
 
-        mapboxgl.setRTLTextPlugin(
+        mapboxglRuntime.setRTLTextPlugin(
             'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js',
             null,
             true // Lazy load the plugin
@@ -245,9 +328,17 @@ export class MapboxMap implements IVisual {
 
     private removeMap() {
         if (this.map) {
+            if (this.debug) {
+                this.debug.log('removeMap called');
+            }
             this.map.remove();
             this.map = null;
             this.mapStyle = "";
+            this.styleReady = false;
+            this.errorHandlerBound = false;
+            this.standardConfig.reset();
+            this.terrainSwitch.reset();
+            this.viewerOverrides = {};
             this.layers = []
             this.controlsPopulated = false;
             this.geocoder = null
@@ -345,13 +436,13 @@ export class MapboxMap implements IVisual {
                     this.previousZoom = newZoom;
                     let firstSymbolId = calculateLabelPosition(this.settings, this.map)
                     this.layers.map(layer => {
-                        if (layer.handleZoom(this.settings)) {
-                            layer.applySettings(this.settings, this.roleMap, firstSymbolId);
-                        }
-                        if (!layer.showLegend(this.settings, this.roleMap)) {
-                            return
-                        }
-                        layer.addLegend(this.legend, this.roleMap, this.settings);
+                    if (layer.handleZoom(this.settings)) {
+                    layer.applySettings(this.settings, this.roleMap, firstSymbolId);
+                    }
+                    if (!layer.showLegend(this.settings, this.roleMap)) {
+                    return
+                    }
+                    layer.addLegend(this.legend, this.roleMap, this.settings);
                     });
                     this.legend?.setLegends();
                 }
@@ -387,7 +478,7 @@ export class MapboxMap implements IVisual {
             if (locations) {
                 locations.map(col => {
                     if (col.rolesIndex.location[0] > location_index) { // TODO
-                        location_index = col.rolesIndex.location[0]
+                    location_index = col.rolesIndex.location[0]
                     }
                 })
             }
@@ -400,6 +491,9 @@ export class MapboxMap implements IVisual {
 
     public update(options: VisualUpdateOptions) {
         // TODO fetch all data instead of first page
+        if (this.debug) {
+            this.debug.count('update');
+        }
         this.events.renderingStarted(options);
         this.settings = MapboxMap.parseSettings(options && options.dataViews && options.dataViews[0]);
 
@@ -410,6 +504,9 @@ export class MapboxMap implements IVisual {
             this.events.renderingFailed(options);
             return
         }
+
+        // Keep the newest data so a pending style load always renders the latest one
+        this.latestDataView = dataView;
 
         if (!this.validateOptions(options)) {
             this.errorDiv.style.display = 'block';
@@ -426,6 +523,12 @@ export class MapboxMap implements IVisual {
 
         this.updateCurrentLevel(this.settings.choropleth, this.roleMap);
 
+        // The token has to be known before the map is created (GL JS v3 authenticates on construction)
+        if (mapboxglRuntime.accessToken != this.settings.api.accessToken) {
+            // @ts-ignore
+            mapboxglRuntime.accessToken = this.settings.api.accessToken;
+        }
+
         if (!this.map) {
             this.addMap();
         }
@@ -441,9 +544,9 @@ export class MapboxMap implements IVisual {
             this.autoZoomControl.setPin(!this.settings.api.autozoom);
         }
 
-        if (mapboxgl.accessToken != this.settings.api.accessToken) {
+        if (mapboxglRuntime.accessToken != this.settings.api.accessToken) {
             // @ts-ignore
-            mapboxgl.accessToken = this.settings.api.accessToken;
+            mapboxglRuntime.accessToken = this.settings.api.accessToken;
         }
 
         let style = this.settings.api.style == 'custom' ? this.settings.api.styleUrl : this.settings.api.style;
@@ -452,26 +555,83 @@ export class MapboxMap implements IVisual {
             // This should run only once but it runs with different dataView
             // param every time so we need to set a different event handler on every
             // style change and deregister it when it ran.
+            const loadId = ++this.styleLoadId;
+            const mapRef = this.map;
+
             const delayedUpdate = (e) => {
-                this.updateLayers(dataView);
+                // The map was removed or replaced, nothing to do
+                if (!this.map || this.map !== mapRef) { return; }
                 this.map.off('style.load', delayedUpdate);
+                // A newer setStyle superseded this one, so ignore it
+                if (loadId !== this.styleLoadId) { return; }
+                this.styleReady = true;
+                // Standard basemap options need the style (and its imports) to be loaded
+                this.manageControlElements();
+                this.applyStandardConfig();
+                this.updateLayers(this.latestDataView || dataView);
+                this.applyDataColors();
+                // The Standard import may still be loading here,
+                // so re-apply the format pane options once the map is idle
+                this.map.once('idle', () => {
+                    // Skip if the map was removed or the style changed in the meantime
+                    if (!this.map || this.map !== mapRef || loadId !== this.styleLoadId || !this.styleReady) { return; }
+                    this.applyStandardConfig();
+                    this.updateLayers(this.latestDataView || dataView);
+                    this.applyDataColors();
+                });
             }
             this.map.on('style.load', delayedUpdate);
             if (this.mapStyle != style) {
                 this.mapStyle = style;
-                this.map.on('error', (e) => {
-                    this.errorDiv.innerHTML = (e && e.error && e.error.message) ? e.error.message : Templates.MissingToken;
-                    this.errorDiv.style.display = 'block';
-                    this.removeMap();
-                    this.events.renderingFailed(options);
-                })
-                this.map.setStyle(this.mapStyle);
+                this.styleReady = false;
+                this.standardConfig.reset();
+                this.terrainSwitch.reset();
+                this.viewerOverrides = {};
+                if (!this.errorHandlerBound) {
+                    this.errorHandlerBound = true;
+                    this.map.on('error', (e) => {
+                        const msg = (e && e.error && e.error.message) ? String(e.error.message) : '';
+                        const status = e && e.error ? (e.error as any).status : undefined;
+                        // Layer/source errors during a style rebuild are not fatal
+                        const transient = status === undefined && (
+                            /does not exist in the map's style/i.test(msg) ||
+                            /not done loading/i.test(msg) ||
+                            (/source/i.test(msg) && /not found/i.test(msg)) ||
+                            (/layer/i.test(msg) && /not found/i.test(msg))
+                        );
+                        if (transient) {
+                            console.warn('Ignored map error:', msg);
+                            return;
+                        }
+                        this.errorDiv.innerHTML = msg ? msg : Templates.MissingToken;
+                        this.errorDiv.style.display = 'block';
+                        this.removeMap();
+                        this.events.renderingFailed(options);
+                    })
+                }
+                if (this.debug) {
+                    this.debug.log('setStyle ' + String(this.mapStyle).substring(0, 70));
+                }
+            // The map was just created with this exact style, so don't load it a second time
+                if (this.initialStyle !== this.mapStyle) {
+                    this.map.setStyle(this.mapStyle);
+                }
+                this.initialStyle = "";
+
             }
         } else {
+            // The style is still loading: delayedUpdate will render with the latest data
+            if (!this.styleReady) {
+                this.events.renderingFinished(options);
+                return;
+            }
             if (this.settings.api.mapboxControls) {
                 this.manageDrawControlElements()
             }
+
+            this.applyStandardConfig();
             this.updateLayers(dataView)
+            this.applyDataColors();
             this.events.renderingFinished(options);
             return;
         }
@@ -479,9 +639,23 @@ export class MapboxMap implements IVisual {
     }
 
     private manageDrawControlElements() {
-        this.drawControl.updateDrawTools(this.settings.api.lasso, this.settings.api.polygon);
+        this.drawControl.updateDrawTools(this.settings.api.lasso, this.settings.api.polygon, this.settings.api.radiusTool);
         this.map.removeControl(this.drawControl);
         this.map.addControl(this.drawControl)
+        this.keepStyleButtonsLast();
+    }
+
+    // Keeps the style panel, X-ray and walk buttons below the selection buttons, in that order
+    private keepStyleButtonsLast() {
+        if (this.stylePanel && this.stylePanel.isAdded()) {
+            this.stylePanel.moveToEnd();
+        }
+        if (this.xrayControl && this.xrayControl.isAdded()) {
+            this.xrayControl.moveToEnd();
+        }
+        if (this.walkControl && this.walkControl.isAdded()) {
+            this.walkControl.moveToEnd();
+        }
     }
 
     private updateGeocoder() {
@@ -579,17 +753,45 @@ export class MapboxMap implements IVisual {
                 this.controlsPopulated = false;
             }
         }
-        if (this.settings.api.showLayerControl && !this.layerControl.isAdded()) {
+        // The layer control lists classic style layers; Mapbox Standard (a style import) does not expose them
+        const wantLayerControl = this.settings.api.showLayerControl && !usesImportedBasemap(this.map);
+        if (wantLayerControl && !this.layerControl.isAdded()) {
             this.map.addControl(this.layerControl);
         }
-        if (!this.settings.api.showLayerControl && this.layerControl.isAdded()) {
+        if (!wantLayerControl && this.layerControl.isAdded()) {
             this.map.removeControl(this.layerControl);
         }
+        const wantPanel = this.settings.standard.showStylePanel && usesImportedBasemap(this.map);
+        const panelChanged = wantPanel !== this.stylePanel.isAdded();
+
+        if (wantPanel && !this.stylePanel.isAdded()) {
+            this.map.addControl(this.stylePanel);
+        }
+        if (!wantPanel && this.stylePanel.isAdded()) {
+            this.map.removeControl(this.stylePanel);
+        }
+
+        // X-ray button goes between the style panel and the walk button
+        if (wantPanel && !this.xrayControl.isAdded()) {
+            this.map.addControl(this.xrayControl, 'top-left');
+        }
+        if (!wantPanel && this.xrayControl.isAdded()) {
+            this.map.removeControl(this.xrayControl);
+        }
+
+        // Walk button always goes right after the style panel button
+        if (this.walkControl.isAdded() && (panelChanged || !wantPanel)) {
+            this.map.removeControl(this.walkControl);
+        }
+        if (wantPanel && !this.walkControl.isAdded()) {
+            this.map.addControl(this.walkControl, 'top-left');
+        }
+        this.keepStyleButtonsLast();
     }
 
     private handleContextMenu() {
         try {
-            this.map.on('contextmenu', (mouseEvent) => {​​
+            this.map.on('contextmenu', (mouseEvent) => {
                 const eventTarget: EventTarget = mouseEvent.target;
                 this.selectionManager.showContextMenu(null, {
                     x: mouseEvent.point.x,
@@ -602,6 +804,35 @@ export class MapboxMap implements IVisual {
         }
     }
 
+    private effectiveStandard(): any {
+        return Object.assign({}, this.settings.standard, this.viewerOverrides);
+    }
+
+    // Should 3D buildings be visible, according to the panel / format pane / style defaults
+    private wantsBuildings(): boolean {
+        const c = this.effectiveStandard().show3dBuildings;
+        if (c === 'show') { return true; }
+        if (c === 'hide') { return false; }
+        const base = this.standardConfig.getBase('show3dBuildings');
+        return base !== false;
+    }
+
+    private applyStandardConfig() {
+        if (!this.map) { return; }
+        const s = this.effectiveStandard();
+        this.standardConfig.apply(this.map, s);
+        this.terrainSwitch.apply(this.map, s.terrain);
+        this.applyDataColors();
+        this.xrayControl.sync();
+        this.stylePanel.refresh();
+    }
+
+    private applyDataColors() {
+        const ids: string[] = [];
+        this.layers.forEach((l) => (l.getLayerIDs() || []).forEach((id) => ids.push(id)));
+        applyDataBrightness(this.map, ids, this.effectiveStandard().dataColors);
+    }
+
     /**
     * This function returns the values to be displayed in the property pane for each object.
     * Usually it is a bind pass of what the property pane gave you, but sometimes you may want to do
@@ -612,6 +843,7 @@ export class MapboxMap implements IVisual {
             return this.palette.enumerateObjectInstances(options);
         } else {
             MapboxSettings.roleMap = this.roleMap;
+            MapboxSettings.mapUsesImports = !!this.map && usesImportedBasemap(this.map);
             return MapboxSettings.enumerateObjectInstances(this.settings || MapboxSettings.getDefault(), options);
         }
     }

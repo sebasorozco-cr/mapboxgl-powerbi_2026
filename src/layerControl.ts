@@ -29,7 +29,7 @@ export class LayerControl implements mapboxgl.IControl {
         this.container = undefined;
     }
 
-    public getDefaultPosition() {
+    public getDefaultPosition(): any {
         return 'top-left';
     }
 
@@ -100,7 +100,7 @@ export class LayerControl implements mapboxgl.IControl {
 
             const checkbox = this.createCheckBox(item);
             checkbox.addEventListener('change', () => {
-                let visibility = (checkbox.checked === true) ? 'visible' : 'none';
+                let visibility: 'visible' | 'none' = (checkbox.checked === true) ? 'visible' : 'none';
                 layers.forEach(layer => this.map.setLayoutProperty(layer, 'visibility', visibility));
             });
             item.appendChild(checkbox);

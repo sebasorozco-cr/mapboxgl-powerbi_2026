@@ -69,6 +69,7 @@ export class Cluster extends Datasource {
         return new Supercluster({
             radius: 50,
             maxZoom: 12,
+            // @ts-ignore: leftover option from older supercluster releases; not in the v7 typings
             initial: function() {
                 return {
                     Count: 0,

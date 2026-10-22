@@ -1,5 +1,5 @@
 import powerbiVisualsApi from "powerbi-visuals-api";
-import { ClassificationMethod, Limits, decorateLayer, shouldUseGradient, getClassCount, getBreaks } from "../mapboxUtils"
+import { ClassificationMethod, Limits, decorateLayer, shouldUseGradient, getClassCount, getBreaks, addDataLayer, moveDataLayer } from "../mapboxUtils"
 import { Palette } from "../palette"
 import { Filter } from "../filter"
 import { RoleMap } from "../roleMap"
@@ -57,7 +57,7 @@ export class Circle extends Layer {
             filter: zeroFilter
         });
 
-        Circle.LayerOrder.forEach((layerId) => map.addLayer(layers[layerId], beforeLayerId));
+        Circle.LayerOrder.forEach((layerId) => addDataLayer(map, layers[layerId], beforeLayerId, settings));
 
         map.setPaintProperty(Circle.HighlightID, 'circle-color', settings.circle.highlightColor);
         map.setPaintProperty(Circle.HighlightID, 'circle-opacity', 1);
@@ -67,7 +67,7 @@ export class Circle extends Layer {
 
     moveLayer(beforeLayerId: string) {
         const map = this.parent.getMap();
-        Circle.LayerOrder.forEach((layerId) => map.moveLayer(layerId, beforeLayerId));
+        Circle.LayerOrder.forEach((layerId) => moveDataLayer(map, layerId, beforeLayerId, this.parent.getSettings()));
     }
 
     hoverHighLight(e) {

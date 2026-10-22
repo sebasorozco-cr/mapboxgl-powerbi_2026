@@ -1,4 +1,4 @@
-import { GeoJSONGeometry } from "@mapbox/geojson-types"
+type GeoJSONGeometry = GeoJSON.Geometry
 import * as mapboxgl from "mapbox-gl"
 
 declare var fastDeepEqual: any;

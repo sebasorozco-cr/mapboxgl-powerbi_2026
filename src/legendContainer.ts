@@ -58,7 +58,7 @@ export class LegendContainer implements mapboxgl.IControl {
         this.legendContainer?.parentNode?.removeChild(this.legendContainer);
     }
 
-    getDefaultPosition(): string {
+    getDefaultPosition(): any {
         return this.position
     }
 

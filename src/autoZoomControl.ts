@@ -36,7 +36,7 @@ export class AutoZoomControl implements mapboxgl.IControl {
         this.map = undefined;
     }
 
-    public getDefaultPosition() {
+    public getDefaultPosition(): any {
         return 'top-right';
     }
 

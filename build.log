@@ -1,0 +1,30 @@
+
+> mapboxgl-powerbi@1.5.0 package
+> pbiviz package
+
+ info   powerbi-visuals-tools version - 4.0.5
+ info   Building visual...
+ info   Certificate is valid.
+ info   Start preparing plugin template
+ info   Finish preparing plugin template
+Webpack Bundle Analyzer saved report to C:\Users\Sebas\Downloads\Mapbox_1.8\mapboxgl-powerbi-1.8\webpack.statistics.prod.html
+ error  Package wasn't created. 3 errors found
+ 
+ warn   Please, make sure that the visual source code matches to requirements of certification:
+ 
+ info   Visual must use API v3.2.0 and above
+ info   The project repository must:
+ info   Include package.json and package-lock.json;
+ info   Not include node_modules folder
+ info   Run npm install expect no errors
+ info   Run pbiviz package expect no errors
+ info   The compiled package of the Custom Visual should match submitted package.
+ info   npm audit command must not return any alerts with high or moderate level.
+ info   The project must include Tslint from Microsoft with no overridden configuration, and this command shouldn’t return any tslint errors.
+ info   https://www.npmjs.com/package/tslint-microsoft-contrib
+ info   Ensure no arbitrary/dynamic code is run (bad: eval(), unsafe use of settimeout(), requestAnimationFrame(), setinterval(some function with user input).. running user input/data etc.)
+ info   Ensure DOM is manipulated safely (bad: innerHTML, D3.html(<some user/data input>), unsanitized user input/data directly added to DOM, etc.)
+ info   Ensure no js errors/exceptions in browser console for any input data. As test dataset please use this sample report
+ 
+ info   Full description of certification requirements you can find in documentation:
+ info   https://docs.microsoft.com/en-us/power-bi/power-bi-custom-visuals-certified#certification-requirements
