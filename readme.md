@@ -51,7 +51,7 @@ Not a Mapbox user yet? [Sign up for an account here](https://www.mapbox.com/sign
 
 ## Do you have questions?
 
-Don't hesitate to contact us on the following e-mail address: mapbox_custom_visual@starschema.com
+Don't hesitate to contact us on the following e-mail address: sorozco@tec.ac.cr
 
 ## Screenshots and GIFs
 
