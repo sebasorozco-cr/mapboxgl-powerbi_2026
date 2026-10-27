@@ -1390,6 +1390,13 @@
                 "integer": true
               }
             },
+            "absoluteHeight": {
+              "displayName": "Height in meters (absolute)",
+              "description": "When on, the Size field is used directly as extrusion height in meters, independent of the data min/max and of report filters.",
+              "type": {
+                "bool": true
+              }
+            },
             "minZoom": {
               "displayName": "Min Zoom",
               "displayNameKey": "minZoom",
