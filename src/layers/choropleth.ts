@@ -158,7 +158,11 @@ export class Choropleth extends Layer {
     }
 
     isExtruding() {
-        return this.parent.getRoleMap().size() && this.settings && this.settings.height > 0
+        if (!this.parent.getRoleMap().size() || !this.settings) {
+            return false
+        }
+        // In absolute mode the Size field itself is the height in meters, so the "height" setting must not gate extrusion
+        return this.settings.absoluteHeight || this.settings.height > 0
     }
 
     hoverHighLight(e) {
@@ -271,8 +275,12 @@ export class Choropleth extends Layer {
     }
 
     sizeInterpolate(sizeLimits: Limits, choroSettings: ChoroplethSettings, size: number): number {
-        if (size === null) {
+        if (size === null || size === undefined || isNaN(Number(size))) {
             return 0
+        }
+        if (choroSettings.absoluteHeight) {
+            // Stable behaviour: the field value IS the height in meters. No dependency on min/max of the (filtered) dataset.
+            return choroSettings.baseHeight + Number(size)
         }
         const k = choroSettings.baseHeight + (size - sizeLimits.min) * (choroSettings.height - choroSettings.baseHeight) / (sizeLimits.max - sizeLimits.min)
         return k
@@ -443,7 +451,8 @@ export class Choropleth extends Layer {
                     filter.push(location);
                     colors.stops.push([location, color.toString()]);
                     if (sizeCol !== '') {
-                        sizes.stops.push([location, this.sizeInterpolate(sizeLimits, choroSettings, size) * Choropleth.HeightMultiplier])
+                        const multiplier = choroSettings.absoluteHeight ? 1 : Choropleth.HeightMultiplier
+                        sizes.stops.push([location, this.sizeInterpolate(sizeLimits, choroSettings, size) * multiplier])
                     }
                 })
                 this.setCalculatedProps(map, colors, sizes, roleMap)
