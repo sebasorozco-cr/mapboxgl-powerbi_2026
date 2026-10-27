@@ -294,6 +294,7 @@ export class ChoroplethSettings {
     public maxZoom: number = 22;
     public height: number = 500;
     public baseHeight: number = 0;
+    public absoluteHeight: boolean = true;
     public extrusionColor: string = "#FFC0CB"
 
     public maxLevel: number = 1
